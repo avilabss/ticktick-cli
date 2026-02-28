@@ -1,12 +1,56 @@
 package logger
 
 import (
+	"context"
+	"fmt"
+	"io"
 	"log/slog"
 	"os"
+	"sync"
+	"time"
 )
 
 // LevelTrace is a custom level below Debug for -vvv output.
 const LevelTrace = slog.Level(-8)
+
+type handler struct {
+	level slog.Level
+	mu    *sync.Mutex
+	out   io.Writer
+}
+
+func (h *handler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.level
+}
+
+func (h *handler) Handle(_ context.Context, r slog.Record) error {
+	levelStr := r.Level.String()
+	if r.Level == LevelTrace {
+		levelStr = "TRACE"
+	}
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	timestamp := r.Time.Format(time.TimeOnly)
+	fmt.Fprintf(h.out, "%s [%-5s] %s", timestamp, levelStr, r.Message)
+
+	r.Attrs(func(a slog.Attr) bool {
+		fmt.Fprintf(h.out, " %s=%v", a.Key, a.Value)
+		return true
+	})
+
+	fmt.Fprintln(h.out)
+	return nil
+}
+
+func (h *handler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return h
+}
+
+func (h *handler) WithGroup(name string) slog.Handler {
+	return h
+}
 
 // SetVerbosity configures slog based on the verbosity level.
 //
@@ -25,20 +69,16 @@ func SetVerbosity(level int) {
 		slogLevel = slog.LevelInfo
 	}
 
-	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: slogLevel,
-		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-			if a.Key == slog.LevelKey && a.Value.String() == "DEBUG-4" {
-				a.Value = slog.StringValue("TRACE")
-			}
-			return a
-		},
-	})
+	h := &handler{
+		level: slogLevel,
+		mu:    &sync.Mutex{},
+		out:   os.Stderr,
+	}
 
-	slog.SetDefault(slog.New(handler))
+	slog.SetDefault(slog.New(h))
 }
 
 // Trace logs at trace level (-vvv). Raw data and internals.
 func Trace(msg string, args ...any) {
-	slog.Log(nil, LevelTrace, msg, args...)
+	slog.Log(context.TODO(), LevelTrace, msg, args...)
 }

@@ -77,3 +77,4 @@ Use `slog.Info`, `slog.Debug` directly. Use `logger.Trace` for the custom trace 
 5. All filtering (tags, projects) is case-sensitive and exact match.
 6. New services should follow the existing package structure: `pkg/ticktick/<service>.go` for API logic, `cmd/tt/<service>/` for CLI commands.
 7. No external CLI frameworks — use stdlib `flag` with `flag.NewFlagSet` for subcommand flag parsing.
+8. Never pass `nil` as a context. Use `context.TODO()` when no context is available.
