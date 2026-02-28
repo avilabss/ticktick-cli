@@ -2,8 +2,11 @@ package ticktick
 
 import (
 	"fmt"
+	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/avilabss/ticktick-cli/pkg/logger"
 )
 
 // NewTicktickClient creates a new TickTick API client with sensible defaults.
@@ -65,7 +68,10 @@ func WithTransport(transport http.RoundTripper) Option {
 //
 // The endpoint should be the path after the base URL, e.g. "/v2/pomodoros/timeline".
 func (c *Client) Get(endpoint string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", c.BaseURL, endpoint), nil)
+	url := fmt.Sprintf("%s%s", c.BaseURL, endpoint)
+	logger.Trace("HTTP request", "method", "GET", "url", url)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -75,6 +81,8 @@ func (c *Client) Get(endpoint string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	slog.Debug("HTTP response", "status", res.StatusCode, "url", url)
 
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
