@@ -14,25 +14,35 @@ Currently implemented: `tt pomodoro export` — exports pomodoro timeline data t
 - No CLI framework — uses stdlib `flag` with manual subcommand routing
 - Logging: `log/slog` (stdlib) with a thin wrapper in `pkg/logger` for a custom Trace level
 - Dependencies: `github.com/joho/godotenv` (only external dep)
+- Task runner: `just` (Justfile)
+- CI: GitHub Actions (lint, test, build)
 
 ## Project Structure
 
 ```
 cmd/tt/
   main.go                       — entrypoint: .env loading, client creation, verbosity parsing, subcommand routing
+  integration_test.go           — CLI integration tests (build tag: integration)
   pomodoro/
     pomodoro.go                 — "pomodoro" subcommand routing (dispatches to export, future commands)
     export.go                   — "pomodoro export": flag parsing, CSV export logic, runExport()
     types.go                    — exportArgs struct, format constants (dateFormat, timeFormat)
     utils.go                    — helpers: splitCSV, includeExclude, matchesFilter, monthRange
+    utils_test.go               — unit tests for utils
 
 pkg/ticktick/
   client.go                     — Client constructor (functional options pattern), HTTP Get helper
+  client_test.go                — unit tests for client (mock HTTPClient)
   pomodoro.go                   — PomodoroService: GetTimeline, GetAll, Next (pagination)
-  types.go                      — Client, Option, Pomodoro, PomodoroTask, Pomodoros types
+  pomodoro_test.go              — unit tests for pomodoro service
+  integration_test.go           — API integration tests (build tag: integration)
+  types.go                      — Client, HTTPClient interface, Option, Pomodoro, PomodoroTask, Pomodoros types
 
 pkg/logger/
   logger.go                     — slog setup: SetVerbosity maps -v/-vv/-vvv to slog levels, custom Trace level
+
+.github/workflows/
+  ci.yml                        — CI pipeline: lint, test, build
 ```
 
 ## Architecture & Patterns
@@ -45,7 +55,10 @@ pkg/logger/
 4. Create `cmd/tt/<service>/` package for CLI commands
 
 ### Functional Options
-`NewTicktickClient(apiToken, ...Option)` uses functional options (`WithTimeout`, `WithTransport`).
+`NewTicktickClient(apiToken, ...Option)` uses functional options (`WithHTTPClient`).
+
+### HTTPClient Interface
+`Client.HTTPClient` is typed as `HTTPClient` interface (just `Do(*http.Request) (*http.Response, error)`). `*http.Client` satisfies it. Tests inject a `mockHTTPClient` with a `DoFunc` field.
 
 ### Pagination
 `Pomodoros` wraps `[]Pomodoro` with a service reference. Callers can use `.Next()` on a result set for manual pagination, or `GetAll()` which paginates automatically. The API returns results newest-first.
@@ -68,6 +81,33 @@ Use `slog.Info`, `slog.Debug` directly. Use `logger.Trace` for the custom trace 
 - Timeline API uses millisecond unix timestamps for the `to` parameter
 - API returns ~31 results per page, newest first
 
+## Testing
+
+### Unit tests
+- Use `mockHTTPClient` struct with `DoFunc` field to mock HTTP calls
+- Run: `just test` or `go test ./...`
+- Test files live alongside source files (`*_test.go`)
+
+### Integration tests
+- Guarded by `//go:build integration` build tag
+- Require `TICKTICK_API_TOKEN` env var (loaded from `.env`)
+- Run: `just test-integration` or `go test -tags integration -v ./...`
+- NOT run in CI — manual only
+
+### CI Pipeline
+- Triggers on push to `main` and PRs to `main`
+- Jobs: `lint` (golangci-lint), `test` (unit tests), `build` (compilation check)
+- Build job depends on lint + test passing
+
+## Common Commands (Justfile)
+
+- `just test` — run unit tests
+- `just test-v` — run unit tests (verbose)
+- `just test-integration` — run integration tests
+- `just lint` — run linter
+- `just build` — verify compilation
+- `just run <args>` — run the CLI
+
 ## Rules
 
 1. **Do not build after changes.** If you do build, remove the generated binary immediately. Do not leave binaries in the repo.
@@ -78,3 +118,5 @@ Use `slog.Info`, `slog.Debug` directly. Use `logger.Trace` for the custom trace 
 6. New services should follow the existing package structure: `pkg/ticktick/<service>.go` for API logic, `cmd/tt/<service>/` for CLI commands.
 7. No external CLI frameworks — use stdlib `flag` with `flag.NewFlagSet` for subcommand flag parsing.
 8. Never pass `nil` as a context. Use `context.TODO()` when no context is available.
+9. Write unit tests for new functionality. Use the `mockHTTPClient` pattern for HTTP mocking.
+10. Integration tests must use `//go:build integration` build tag.

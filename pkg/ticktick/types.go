@@ -4,10 +4,16 @@ import "net/http"
 
 const TimeFormat = "2006-01-02T15:04:05.000-0700"
 
+// HTTPClient is the interface for making HTTP requests.
+// *http.Client satisfies this interface.
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type Client struct {
 	BaseURL    string
 	APIToken   string
-	HTTPClient *http.Client
+	HTTPClient HTTPClient
 
 	Pomodoro *PomodoroService
 }

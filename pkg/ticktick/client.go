@@ -11,7 +11,7 @@ import (
 
 // NewTicktickClient creates a new TickTick API client with sensible defaults.
 //
-// Options can be provided to override the default timeout and transport.
+// Options can be provided to override the default HTTP client.
 func NewTicktickClient(apiToken string, options ...Option) (*Client, error) {
 	if apiToken == "" {
 		return nil, fmt.Errorf("apiToken is required")
@@ -36,30 +36,16 @@ func NewTicktickClient(apiToken string, options ...Option) (*Client, error) {
 	return client, nil
 }
 
-// WithTimeout sets the HTTP client timeout.
-func WithTimeout(timeout time.Duration) Option {
-	if timeout <= 0 {
+// WithHTTPClient sets a custom HTTP client.
+func WithHTTPClient(httpClient HTTPClient) Option {
+	if httpClient == nil {
 		return func(c *Client) error {
-			return fmt.Errorf("timeout must be greater than 0")
+			return fmt.Errorf("httpClient is required")
 		}
 	}
 
 	return func(c *Client) error {
-		c.HTTPClient.Timeout = timeout
-		return nil
-	}
-}
-
-// WithTransport sets the HTTP client transport.
-func WithTransport(transport http.RoundTripper) Option {
-	if transport == nil {
-		return func(c *Client) error {
-			return fmt.Errorf("transport is required")
-		}
-	}
-
-	return func(c *Client) error {
-		c.HTTPClient.Transport = transport
+		c.HTTPClient = httpClient
 		return nil
 	}
 }

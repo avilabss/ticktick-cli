@@ -20,6 +20,9 @@ go mod tidy
 
 ```sh
 go run ./cmd/tt <command> <subcommand> [flags]
+
+# Or use just
+just run pomodoro export
 ```
 
 ## Commands
@@ -64,4 +67,26 @@ go run ./cmd/tt pomodoro export --include-projects "Whitebox" --exclude-tags "fr
 
 # Custom output path
 go run ./cmd/tt pomodoro export --output report.csv
+```
+
+## Development
+
+### Testing
+
+```sh
+just test                # unit tests
+just test-v              # unit tests (verbose)
+just test-integration    # integration tests (requires .env)
+```
+
+### Linting
+
+```sh
+just lint
+```
+
+### All Justfile commands
+
+```sh
+just --list
 ```
