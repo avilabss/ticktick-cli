@@ -33,14 +33,14 @@ func (h *handler) Handle(_ context.Context, r slog.Record) error {
 	defer h.mu.Unlock()
 
 	timestamp := r.Time.Format(time.TimeOnly)
-	fmt.Fprintf(h.out, "%s [%-5s] %s", timestamp, levelStr, r.Message)
+	_, _ = fmt.Fprintf(h.out, "%s [%-5s] %s", timestamp, levelStr, r.Message)
 
 	r.Attrs(func(a slog.Attr) bool {
-		fmt.Fprintf(h.out, " %s=%v", a.Key, a.Value)
+		_, _ = fmt.Fprintf(h.out, " %s=%v", a.Key, a.Value)
 		return true
 	})
 
-	fmt.Fprintln(h.out)
+	_, _ = fmt.Fprintln(h.out)
 	return nil
 }
 

@@ -62,7 +62,7 @@ func TestGetTimeline_WithTimestamp(t *testing.T) {
 		},
 	}
 	client, _ := NewTicktickClient("token", WithHTTPClient(mock))
-	client.Pomodoro.GetTimeline(1234567890000)
+	_, _ = client.Pomodoro.GetTimeline(1234567890000)
 
 	if !strings.Contains(capturedURL, "?to=1234567890000") {
 		t.Errorf("expected URL to contain '?to=1234567890000', got %q", capturedURL)

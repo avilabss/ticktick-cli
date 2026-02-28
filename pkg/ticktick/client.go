@@ -71,7 +71,7 @@ func (c *Client) Get(endpoint string) (*http.Response, error) {
 	slog.Debug("HTTP response", "status", res.StatusCode, "url", url)
 
 	if res.StatusCode != http.StatusOK {
-		res.Body.Close()
+		_ = res.Body.Close()
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 

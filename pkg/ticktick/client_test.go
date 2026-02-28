@@ -85,7 +85,7 @@ func TestGet_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	if res.StatusCode != http.StatusOK {
 		t.Errorf("expected 200, got %d", res.StatusCode)
@@ -138,7 +138,7 @@ func TestGet_CookieHeader(t *testing.T) {
 
 	client, _ := NewTicktickClient("my-secret-token", WithHTTPClient(mock))
 	res, _ := client.Get("/v2/test")
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	cookie := capturedReq.Header.Get("Cookie")
 	if cookie != "t=my-secret-token" {
@@ -160,7 +160,7 @@ func TestGet_URLConstruction(t *testing.T) {
 
 	client, _ := NewTicktickClient("token", WithHTTPClient(mock))
 	res, _ := client.Get("/v2/pomodoros/timeline")
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	expected := "https://api.ticktick.com/api/v2/pomodoros/timeline"
 	if capturedURL != expected {

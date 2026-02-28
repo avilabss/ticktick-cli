@@ -30,7 +30,7 @@ func (s *PomodoroService) GetTimeline(to int64) (*Pomodoros, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 
 	var items []Pomodoro
 	if err := json.NewDecoder(res.Body).Decode(&items); err != nil {
