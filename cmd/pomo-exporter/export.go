@@ -13,7 +13,7 @@ import (
 
 var csvHeader = []string{"Date", "Week", "Start Time", "End Time", "Duration", "Tags", "Description"}
 
-func exportCSV(pomodoros []ticktick.Pomodoro, projectName string, filterTags []string, filename string) error {
+func exportCSV(pomodoros []ticktick.Pomodoro, args Args, filename string) error {
 	file, err := os.Create(filename)
 	if err != nil {
 		return fmt.Errorf("failed to create file: %w", err)
@@ -30,7 +30,7 @@ func exportCSV(pomodoros []ticktick.Pomodoro, projectName string, filterTags []s
 	rowCount := 0
 	for _, p := range pomodoros {
 		for _, t := range p.Tasks {
-			if projectName != "" && !strings.Contains(strings.ToLower(t.ProjectName), strings.ToLower(projectName)) {
+			if !matchesFilter(t.ProjectName, args.IncludeProjects, args.ExcludeProjects) {
 				continue
 			}
 
@@ -46,13 +46,15 @@ func exportCSV(pomodoros []ticktick.Pomodoro, projectName string, filterTags []s
 				continue
 			}
 
+			tags := includeExclude(t.Tags, args.IncludeTags, args.ExcludeTags)
+
 			row := []string{
 				startTime.Format(DateFormat),
 				fmt.Sprintf("%d", (startTime.Day()-1)/7+1),
 				startTime.Format(TimeFormat),
 				endTime.Format(TimeFormat),
 				endTime.Sub(startTime).String(),
-				strings.Join(filter(t.Tags, filterTags), ", "),
+				strings.Join(tags, ", "),
 				t.Title,
 			}
 

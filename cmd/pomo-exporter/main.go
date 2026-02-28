@@ -13,30 +13,36 @@ import (
 	"github.com/joho/godotenv"
 )
 
+func splitCSV(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, ",")
+}
+
 func parseArgs() Args {
 	now := time.Now()
 	year := flag.Int("year", now.Year(), "year to fetch pomodoros for")
 	month := flag.Int("month", int(now.Month()), "month to fetch pomodoros for (1-12)")
-	filterTagsStr := flag.String("filter-tags", "", "comma-separated tags to remove from output")
-	projectName := flag.String("project-name", "", "filter by project name (case-insensitive)")
+	includeTags := flag.String("include-tags", "", "comma-separated tags to include")
+	excludeTags := flag.String("exclude-tags", "", "comma-separated tags to exclude")
+	includeProjects := flag.String("include-projects", "", "comma-separated project names to include")
+	excludeProjects := flag.String("exclude-projects", "", "comma-separated project names to exclude")
 	output := flag.String("output", "", "output CSV file path (default: pomodoros-YYYY-MM.csv)")
 	flag.Parse()
-
-	var filterTags []string
-	if *filterTagsStr != "" {
-		filterTags = strings.Split(*filterTagsStr, ",")
-	}
 
 	if *output == "" {
 		*output = fmt.Sprintf("pomodoros-%04d-%02d.csv", *year, *month)
 	}
 
 	return Args{
-		Year:        *year,
-		Month:       *month,
-		FilterTags:  filterTags,
-		ProjectName: *projectName,
-		Output:      *output,
+		Year:            *year,
+		Month:           *month,
+		IncludeTags:     splitCSV(*includeTags),
+		ExcludeTags:     splitCSV(*excludeTags),
+		IncludeProjects: splitCSV(*includeProjects),
+		ExcludeProjects: splitCSV(*excludeProjects),
+		Output:          *output,
 	}
 }
 
@@ -68,7 +74,7 @@ func main() {
 
 	slices.Reverse(result.Items)
 
-	if err := exportCSV(result.Items, args.ProjectName, args.FilterTags, args.Output); err != nil {
+	if err := exportCSV(result.Items, args, args.Output); err != nil {
 		log.Fatalf("Error exporting CSV: %v", err)
 	}
 }
