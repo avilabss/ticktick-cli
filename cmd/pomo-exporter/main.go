@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"os"
 	"slices"
@@ -11,26 +12,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func filter(items []string, exclude []string) []string {
-	var result []string
-	for _, item := range items {
-		if slices.Contains(exclude, item) {
-			continue
-		}
-		result = append(result, item)
-	}
-	return result
-}
-
-func monthRange(year int, month time.Month) (time.Time, time.Time) {
-	start := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
-	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
-	return start, end
-}
-
-func PrintPomodoros(pomodoros []ticktick.Pomodoro) {
+func printPomodoros(pomodoros []ticktick.Pomodoro, projectName string, filterTags []string) {
 	for _, p := range pomodoros {
 		for _, t := range p.Tasks {
+			if projectName != "" && !strings.Contains(strings.ToLower(t.ProjectName), strings.ToLower(projectName)) {
+				continue
+			}
+
 			startTime, err := time.Parse(ticktick.TimeFormat, t.StartTime)
 			if err != nil {
 				log.Printf("Error parsing start time: %v", err)
@@ -48,7 +36,7 @@ func PrintPomodoros(pomodoros []ticktick.Pomodoro) {
 			startTimeStr := startTime.Format(TimeFormat)
 			endTimeStr := endTime.Format(TimeFormat)
 			duration := endTime.Sub(startTime)
-			tags := filter(t.Tags, []string{"freelancing", "whitebox"})
+			tags := filter(t.Tags, filterTags)
 			workType := strings.Join(tags, ", ")
 			workDescription := t.Title
 
@@ -58,6 +46,13 @@ func PrintPomodoros(pomodoros []ticktick.Pomodoro) {
 }
 
 func main() {
+	now := time.Now()
+	year := flag.Int("year", now.Year(), "year to fetch pomodoros for")
+	month := flag.Int("month", int(now.Month()), "month to fetch pomodoros for (1-12)")
+	filterTagsStr := flag.String("filter-tags", "", "comma-separated tags to remove from output")
+	projectName := flag.String("project-name", "", "filter by project name (case-insensitive)")
+	flag.Parse()
+
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v", err)
@@ -68,12 +63,17 @@ func main() {
 		log.Fatal("TICKTICK_API_TOKEN is required")
 	}
 
+	var filterTags []string
+	if *filterTagsStr != "" {
+		filterTags = strings.Split(*filterTagsStr, ",")
+	}
+
 	client, err := ticktick.NewTicktickClient(apiToken)
 	if err != nil {
 		log.Fatalf("Error creating TickTick client: %v", err)
 	}
 
-	start, end := monthRange(2026, time.February)
+	start, end := monthRange(*year, time.Month(*month))
 	log.Printf("Fetching pomodoros from %s to %s\n", start.Format(time.RFC3339), end.Format(time.RFC3339))
 
 	pomodoros, err := client.GetAllPomodorosTimeline(start, end)
@@ -82,5 +82,5 @@ func main() {
 	}
 
 	slices.Reverse(pomodoros)
-	PrintPomodoros(pomodoros)
+	printPomodoros(pomodoros, *projectName, filterTags)
 }

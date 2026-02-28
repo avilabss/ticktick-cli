@@ -7,36 +7,6 @@ import (
 	"time"
 )
 
-type Client struct {
-	BaseURL    string
-	APIToken   string
-	HTTPClient *http.Client
-}
-
-type Option func(*Client) error
-
-type Task struct {
-	TaskID      string   `json:"taskId"`
-	Title       string   `json:"title"`
-	ProjectName string   `json:"projectName"`
-	Tags        []string `json:"tags"`
-	StartTime   string   `json:"startTime"`
-	EndTime     string   `json:"endTime"`
-}
-
-type Pomodoro struct {
-	ID            string `json:"id"`
-	Tasks         []Task `json:"tasks"`
-	StartTime     string `json:"startTime"`
-	EndTime       string `json:"endTime"`
-	Status        int    `json:"status"`
-	PauseDuration int    `json:"pauseDuration"`
-	AdjustTime    int    `json:"adjustTime"`
-	Etag          string `json:"etag"`
-	Type          int    `json:"type"`
-	Added         bool   `json:"added"`
-}
-
 // NewTicktickClient creates a new TickTick API client with sensible defaults.
 //
 // Options can be provided to override the default timeout and transport.
@@ -110,6 +80,7 @@ func (c *Client) Get(endpoint string) (*http.Response, error) {
 	}
 
 	if res.StatusCode != http.StatusOK {
+		res.Body.Close()
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 
@@ -163,8 +134,8 @@ func (c *Client) GetAllPomodorosTimeline(start time.Time, end time.Time) ([]Pomo
 	var allPomodoros []Pomodoro
 
 	startUnix := start.UnixMilli()
-	endUnix := end.UnixMilli()
-	currentTo := endUnix
+	currentTo := end.UnixMilli()
+	previousTo := int64(-1)
 
 	for {
 		pomodoros, err := c.GetPomodorosTimeline(currentTo)
@@ -191,9 +162,10 @@ func (c *Client) GetAllPomodorosTimeline(start time.Time, end time.Time) ([]Pomo
 			currentTo = pUnix
 		}
 
-		if reachedStart {
+		if reachedStart || currentTo == previousTo {
 			break
 		}
+		previousTo = currentTo
 	}
 
 	return allPomodoros, nil
