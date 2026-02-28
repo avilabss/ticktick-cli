@@ -60,15 +60,15 @@ func main() {
 	start, end := monthRange(args.Year, time.Month(args.Month))
 	log.Printf("Fetching pomodoros from %s to %s", start.Format(time.RFC3339), end.Format(time.RFC3339))
 
-	pomodoros, err := client.GetAllPomodorosTimeline(start, end)
+	result, err := client.Pomodoro.GetAll(start, end)
 	if err != nil {
 		log.Fatalf("Error fetching pomodoros: %v", err)
 	}
-	log.Printf("Fetched %d pomodoros", len(pomodoros))
+	log.Printf("Fetched %d pomodoros", len(result.Items))
 
-	slices.Reverse(pomodoros)
+	slices.Reverse(result.Items)
 
-	if err := exportCSV(pomodoros, args.ProjectName, args.FilterTags, args.Output); err != nil {
+	if err := exportCSV(result.Items, args.ProjectName, args.FilterTags, args.Output); err != nil {
 		log.Fatalf("Error exporting CSV: %v", err)
 	}
 }

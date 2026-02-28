@@ -1,7 +1,6 @@
 package ticktick
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
@@ -10,10 +9,6 @@ import (
 // NewTicktickClient creates a new TickTick API client with sensible defaults.
 //
 // Options can be provided to override the default timeout and transport.
-//
-// The default timeout is 30 seconds. Use WithTimeout to set a custom timeout.
-//
-// The default transport is http.DefaultTransport. Use WithTransport to set a custom transport.
 func NewTicktickClient(apiToken string, options ...Option) (*Client, error) {
 	if apiToken == "" {
 		return nil, fmt.Errorf("apiToken is required")
@@ -26,6 +21,8 @@ func NewTicktickClient(apiToken string, options ...Option) (*Client, error) {
 			Timeout: 30 * time.Second,
 		},
 	}
+
+	client.Pomodoro = &PomodoroService{client: client}
 
 	for _, option := range options {
 		if err := option(client); err != nil {
@@ -85,88 +82,4 @@ func (c *Client) Get(endpoint string) (*http.Response, error) {
 	}
 
 	return res, nil
-}
-
-// GetPomodorosTimeline returns pomodoros starting from the specified timestamp.
-// If to is 0, it returns the latest pomodoros.
-//
-// The API sends 31 results by default.
-// Use "startTime" converted in unix timestamp of the last record as "to" param for the request to get next set of results.
-func (c *Client) GetPomodorosTimeline(to int64) ([]Pomodoro, error) {
-	endpoint := "/v2/pomodoros/timeline"
-	if to > 0 {
-		endpoint = fmt.Sprintf("%s?to=%d", endpoint, to)
-	}
-
-	res, err := c.Get(endpoint)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	var pomodoros []Pomodoro
-	err = json.NewDecoder(res.Body).Decode(&pomodoros)
-	if err != nil {
-		return nil, err
-	}
-
-	return pomodoros, nil
-}
-
-// GetNextPomodorosTimeline returns the next set of pomodoros after the last one in previousPomodoros.
-func (c *Client) GetNextPomodorosTimeline(previousPomodoros []Pomodoro) ([]Pomodoro, error) {
-	if len(previousPomodoros) == 0 {
-		return nil, fmt.Errorf("previousPomodoros cannot be empty")
-	}
-
-	lastPomodoro := previousPomodoros[len(previousPomodoros)-1]
-	lastStartTime := lastPomodoro.StartTime
-
-	to, err := time.Parse(TimeFormat, lastStartTime)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse last pomodoro start time: %w", err)
-	}
-
-	return c.GetPomodorosTimeline(to.UnixMilli())
-}
-
-func (c *Client) GetAllPomodorosTimeline(start time.Time, end time.Time) ([]Pomodoro, error) {
-	var allPomodoros []Pomodoro
-
-	startUnix := start.UnixMilli()
-	currentTo := end.UnixMilli()
-	previousTo := int64(-1)
-
-	for {
-		pomodoros, err := c.GetPomodorosTimeline(currentTo)
-		if err != nil {
-			return nil, err
-		}
-
-		if len(pomodoros) == 0 {
-			break
-		}
-
-		reachedStart := false
-		for _, p := range pomodoros {
-			pTime, err := time.Parse(TimeFormat, p.StartTime)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse pomodoro start time: %w", err)
-			}
-			pUnix := pTime.UnixMilli()
-			if pUnix < startUnix {
-				reachedStart = true
-				break
-			}
-			allPomodoros = append(allPomodoros, p)
-			currentTo = pUnix
-		}
-
-		if reachedStart || currentTo == previousTo {
-			break
-		}
-		previousTo = currentTo
-	}
-
-	return allPomodoros, nil
 }

@@ -8,11 +8,13 @@ type Client struct {
 	BaseURL    string
 	APIToken   string
 	HTTPClient *http.Client
+
+	Pomodoro *PomodoroService
 }
 
 type Option func(*Client) error
 
-type Task struct {
+type PomodoroTask struct {
 	TaskID      string   `json:"taskId"`
 	Title       string   `json:"title"`
 	ProjectName string   `json:"projectName"`
@@ -22,14 +24,20 @@ type Task struct {
 }
 
 type Pomodoro struct {
-	ID            string `json:"id"`
-	Tasks         []Task `json:"tasks"`
-	StartTime     string `json:"startTime"`
-	EndTime       string `json:"endTime"`
-	Status        int    `json:"status"`
-	PauseDuration int    `json:"pauseDuration"`
-	AdjustTime    int    `json:"adjustTime"`
-	Etag          string `json:"etag"`
-	Type          int    `json:"type"`
-	Added         bool   `json:"added"`
+	ID            string         `json:"id"`
+	Tasks         []PomodoroTask `json:"tasks"`
+	StartTime     string         `json:"startTime"`
+	EndTime       string         `json:"endTime"`
+	Status        int            `json:"status"`
+	PauseDuration int            `json:"pauseDuration"`
+	AdjustTime    int            `json:"adjustTime"`
+	Etag          string         `json:"etag"`
+	Type          int            `json:"type"`
+	Added         bool           `json:"added"`
+}
+
+// Pomodoros is a result set that supports pagination.
+type Pomodoros struct {
+	Items   []Pomodoro
+	service *PomodoroService
 }
