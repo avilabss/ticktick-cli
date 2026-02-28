@@ -1,26 +1,58 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/avilabss/ticktick-cli/pkg/ticktick"
 	"github.com/joho/godotenv"
 )
 
-func PrintPomodoros(pomodoros []ticktick.Pomodoro) {
-	for pi, p := range pomodoros {
-		fmt.Printf("Pomodoro %d: %s\n", pi, p.ID)
+func filter(items []string, exclude []string) []string {
+	var result []string
+	for _, item := range items {
+		if slices.Contains(exclude, item) {
+			continue
+		}
+		result = append(result, item)
+	}
+	return result
+}
 
-		for ti, t := range p.Tasks {
-			fmt.Printf("\tTask %d: %s\n", ti, t.TaskID)
-			fmt.Printf("\t\tTitle: %s\n", t.Title)
-			fmt.Printf("\t\tProject: %s\n", t.ProjectName)
-			fmt.Printf("\t\tTags: %v\n", strings.Join(t.Tags, ", "))
-			fmt.Printf("\t\tStart Time: %s\n", t.StartTime)
-			fmt.Printf("\t\tEnd Time: %s\n", t.EndTime)
+func monthRange(year int, month time.Month) (time.Time, time.Time) {
+	start := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
+	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+	return start, end
+}
+
+func PrintPomodoros(pomodoros []ticktick.Pomodoro) {
+	for _, p := range pomodoros {
+		for _, t := range p.Tasks {
+			startTime, err := time.Parse(ticktick.TimeFormat, t.StartTime)
+			if err != nil {
+				log.Printf("Error parsing start time: %v", err)
+				continue
+			}
+
+			endTime, err := time.Parse(ticktick.TimeFormat, t.EndTime)
+			if err != nil {
+				log.Printf("Error parsing end time: %v", err)
+				continue
+			}
+
+			dateStr := startTime.Format(DateFormat)
+			weekNumOfMonth := (startTime.Day()-1)/7 + 1
+			startTimeStr := startTime.Format(TimeFormat)
+			endTimeStr := endTime.Format(TimeFormat)
+			duration := endTime.Sub(startTime)
+			tags := filter(t.Tags, []string{"freelancing", "whitebox"})
+			workType := strings.Join(tags, ", ")
+			workDescription := t.Title
+
+			log.Printf("\t%s | %d | %s | %s | %s | %s | %s\n", dateStr, weekNumOfMonth, startTimeStr, endTimeStr, duration, workType, workDescription)
 		}
 	}
 }
@@ -41,23 +73,14 @@ func main() {
 		log.Fatalf("Error creating TickTick client: %v", err)
 	}
 
-	var allPomodoros []ticktick.Pomodoro
+	start, end := monthRange(2026, time.February)
+	log.Printf("Fetching pomodoros from %s to %s\n", start.Format(time.RFC3339), end.Format(time.RFC3339))
 
-	pomodoros, err := client.GetPomodorosTimeline(0)
+	pomodoros, err := client.GetAllPomodorosTimeline(start, end)
 	if err != nil {
-		log.Fatalf("Error fetching pomodoros timeline: %v", err)
+		log.Fatalf("Error fetching all pomodoros timeline: %v", err)
 	}
 
-	log.Printf("Fetched %d pomodoros\n", len(pomodoros))
-	allPomodoros = append(allPomodoros, pomodoros...)
-
-	nextPomodoros, err := client.GetNextPomodorosTimeline(pomodoros)
-	if err != nil {
-		log.Fatalf("Error fetching next pomodoros timeline: %v", err)
-	}
-
-	log.Printf("Fetched %d next pomodoros\n", len(nextPomodoros))
-	allPomodoros = append(allPomodoros, nextPomodoros...)
-
-	PrintPomodoros(allPomodoros)
+	slices.Reverse(pomodoros)
+	PrintPomodoros(pomodoros)
 }

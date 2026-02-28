@@ -151,7 +151,7 @@ func (c *Client) GetNextPomodorosTimeline(previousPomodoros []Pomodoro) ([]Pomod
 	lastPomodoro := previousPomodoros[len(previousPomodoros)-1]
 	lastStartTime := lastPomodoro.StartTime
 
-	to, err := time.Parse("2006-01-02T15:04:05.000-0700", lastStartTime)
+	to, err := time.Parse(TimeFormat, lastStartTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse last pomodoro start time: %w", err)
 	}
@@ -164,7 +164,7 @@ func (c *Client) GetAllPomodorosTimeline(start time.Time, end time.Time) ([]Pomo
 
 	startUnix := start.UnixMilli()
 	endUnix := end.UnixMilli()
-	currentTo := startUnix
+	currentTo := endUnix
 
 	for {
 		pomodoros, err := c.GetPomodorosTimeline(currentTo)
@@ -176,18 +176,22 @@ func (c *Client) GetAllPomodorosTimeline(start time.Time, end time.Time) ([]Pomo
 			break
 		}
 
-		allPomodoros = append(allPomodoros, pomodoros...)
-
-		lastPomodoro := pomodoros[len(pomodoros)-1]
-		lastStartTime := lastPomodoro.StartTime
-
-		currentToTime, err := time.Parse("2006-01-02T15:04:05.000-0700", lastStartTime)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse last pomodoro start time: %w", err)
+		reachedStart := false
+		for _, p := range pomodoros {
+			pTime, err := time.Parse(TimeFormat, p.StartTime)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse pomodoro start time: %w", err)
+			}
+			pUnix := pTime.UnixMilli()
+			if pUnix < startUnix {
+				reachedStart = true
+				break
+			}
+			allPomodoros = append(allPomodoros, p)
+			currentTo = pUnix
 		}
-		currentTo = currentToTime.UnixMilli()
 
-		if currentTo < endUnix {
+		if reachedStart {
 			break
 		}
 	}
