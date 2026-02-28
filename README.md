@@ -18,7 +18,7 @@ go mod tidy
 
 ## pomo-exporter
 
-Exports pomodoro timeline data from TickTick.
+Exports pomodoro timeline data from TickTick to CSV.
 
 ### Usage
 
@@ -33,7 +33,8 @@ go run ./cmd/pomo-exporter [flags]
 | `--year` | current year | Year to fetch pomodoros for |
 | `--month` | current month | Month to fetch pomodoros for (1-12) |
 | `--filter-tags` | _(none)_ | Comma-separated tags to remove from output |
-| `--project-name` | _(none)_ | Filter by project name (case-insensitive) |
+| `--project-name` | _(none)_ | Filter by project name (case-insensitive, partial match) |
+| `--output` | `pomodoros-YYYY-MM.csv` | Output CSV file path |
 
 ### Examples
 
@@ -46,4 +47,7 @@ go run ./cmd/pomo-exporter --year 2026 --month 1
 
 # Filter by project and remove specific tags from output
 go run ./cmd/pomo-exporter --project-name "Whitebox" --filter-tags "freelancing,whitebox"
+
+# Custom output path
+go run ./cmd/pomo-exporter --output report.csv
 ```
