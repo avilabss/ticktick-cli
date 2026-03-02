@@ -141,11 +141,17 @@ just --list
 
 ### Releasing
 
-Releases are automated via GitHub Actions. To create a new release:
+Every push to `main` automatically:
+1. Runs tests
+2. Increments the patch version (e.g. v0.0.1 → v0.0.2)
+3. Builds binaries for all platforms (linux/darwin/windows, amd64/arm64)
+4. Publishes a GitHub release with SHA256 checksums
+
+To bump minor or major version, create the tag manually before the next push:
 
 ```sh
 git tag v0.1.0
 git push origin v0.1.0
 ```
 
-This builds binaries for all platforms (linux/darwin/windows, amd64/arm64) and publishes them as a GitHub release with SHA256 checksums.
+The next auto-release will increment from that tag (v0.1.0 → v0.1.1).

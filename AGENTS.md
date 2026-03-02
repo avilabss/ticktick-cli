@@ -43,7 +43,7 @@ pkg/logger/
 
 .github/workflows/
   ci.yml                        — CI pipeline: lint, test, build
-  release.yml                   — Cross-platform build + GitHub release on version tags
+  release.yml                   — Auto-release on push to main: test → auto-tag (patch bump) → cross-platform build → GitHub release
 ```
 
 ## Architecture & Patterns
