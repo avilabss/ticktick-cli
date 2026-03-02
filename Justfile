@@ -20,8 +20,8 @@ lint:
 
 # Build (verifies compilation, removes binary)
 build:
-    go build ./cmd/tt && rm -f tt
+    go build ./cmd/tick && rm -f tick
 
 # Run with arguments
 run *ARGS:
-    go run ./cmd/tt {{ARGS}}
+    go run ./cmd/tick {{ARGS}}

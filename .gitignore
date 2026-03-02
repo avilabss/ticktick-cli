@@ -1,6 +1,8 @@
 # Env files
 .env
 
+# Binaries
+/tick
+
 # Other files
 *.csv
-tt

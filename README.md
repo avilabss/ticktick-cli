@@ -2,24 +2,72 @@
 
 CLI tool for interacting with the TickTick API.
 
+## Installation
+
+### From GitHub Releases
+
+Download the latest binary for your platform from the [releases page](https://github.com/avilabss/ticktick-cli/releases).
+
+**macOS (Apple Silicon)**
+
+```sh
+curl -L -o tick https://github.com/avilabss/ticktick-cli/releases/latest/download/tick-darwin-arm64
+chmod +x tick
+sudo mv tick /usr/local/bin/
+```
+
+**macOS (Intel)**
+
+```sh
+curl -L -o tick https://github.com/avilabss/ticktick-cli/releases/latest/download/tick-darwin-amd64
+chmod +x tick
+sudo mv tick /usr/local/bin/
+```
+
+**Linux (x86_64)**
+
+```sh
+curl -L -o tick https://github.com/avilabss/ticktick-cli/releases/latest/download/tick-linux-amd64
+chmod +x tick
+sudo mv tick /usr/local/bin/
+```
+
+**Linux (ARM64)**
+
+```sh
+curl -L -o tick https://github.com/avilabss/ticktick-cli/releases/latest/download/tick-linux-arm64
+chmod +x tick
+sudo mv tick /usr/local/bin/
+```
+
+**Windows**
+
+Download `tick-windows-amd64.exe` from the [releases page](https://github.com/avilabss/ticktick-cli/releases), rename to `tick.exe`, and add its location to your `PATH`.
+
+### From source
+
+```sh
+go install github.com/avilabss/ticktick-cli/cmd/tick@latest
+```
+
+### Verify
+
+```sh
+tick pomodoro export --help
+```
+
 ## Setup
 
-1. Create a `.env` file in the project root:
+Create a `.env` file in the project root:
 
 ```
 TICKTICK_API_TOKEN=your_token_here
 ```
 
-2. Install dependencies:
-
-```sh
-go mod tidy
-```
-
 ## Usage
 
 ```sh
-go run ./cmd/tt <command> <subcommand> [flags]
+tick <command> <subcommand> [flags]
 
 # Or use just
 just run pomodoro export
@@ -32,7 +80,7 @@ just run pomodoro export
 Export pomodoro timeline data to CSV.
 
 ```sh
-go run ./cmd/tt pomodoro export [flags]
+tick pomodoro export [flags]
 ```
 
 #### Flags
@@ -51,22 +99,22 @@ go run ./cmd/tt pomodoro export [flags]
 
 ```sh
 # Export current month's pomodoros
-go run ./cmd/tt pomodoro export
+tick pomodoro export
 
 # Export January 2026
-go run ./cmd/tt pomodoro export --year 2026 --month 1
+tick pomodoro export --year 2026 --month 1
 
 # Include only specific project
-go run ./cmd/tt pomodoro export --include-projects "Whitebox"
+tick pomodoro export --include-projects "TickTick"
 
 # Exclude specific tags
-go run ./cmd/tt pomodoro export --exclude-tags "freelancing,whitebox"
+tick pomodoro export --exclude-tags "fun"
 
 # Combine filters
-go run ./cmd/tt pomodoro export --include-projects "Whitebox" --exclude-tags "freelancing"
+tick pomodoro export --include-projects "TickTick" --exclude-tags "fun"
 
 # Custom output path
-go run ./cmd/tt pomodoro export --output report.csv
+tick pomodoro export --output report.csv
 ```
 
 ## Development
@@ -90,3 +138,14 @@ just lint
 ```sh
 just --list
 ```
+
+### Releasing
+
+Releases are automated via GitHub Actions. To create a new release:
+
+```sh
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+This builds binaries for all platforms (linux/darwin/windows, amd64/arm64) and publishes them as a GitHub release with SHA256 checksums.
