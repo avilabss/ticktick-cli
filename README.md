@@ -53,7 +53,7 @@ go install github.com/avilabss/ticktick-cli/cmd/tick@latest
 ### Verify
 
 ```sh
-tick pomodoro export --help
+tick --help
 ```
 
 ## Setup
@@ -68,53 +68,46 @@ TICKTICK_API_TOKEN=your_token_here
 
 ```sh
 tick <command> <subcommand> [flags]
-
-# Or use just
-just run pomodoro export
 ```
 
 ## Commands
 
-### pomodoro export
-
-Export pomodoro timeline data to CSV.
+### Tasks
 
 ```sh
-tick pomodoro export [flags]
+tick task list [--project NAME] [--tag TAG] [--priority N]
+tick task add --title "..." [--project NAME] [--tags "a,b"] [--priority N] [--due DATE]
+tick task complete ID [--project NAME]
+tick task delete ID [--project NAME]
+tick task get ID [--project NAME]
+tick project list
 ```
 
-#### Flags
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `--year` | current year | Year to fetch pomodoros for |
-| `--month` | current month | Month to fetch pomodoros for (1-12) |
-| `--include-tags` | _(none)_ | Comma-separated tags to include |
-| `--exclude-tags` | _(none)_ | Comma-separated tags to exclude |
-| `--include-projects` | _(none)_ | Comma-separated project names to include |
-| `--exclude-projects` | _(none)_ | Comma-separated project names to exclude |
-| `--output` | `pomodoros-YYYY-MM.csv` | Output CSV file path |
-
-#### Examples
+### Pomodoro
 
 ```sh
-# Export current month's pomodoros
-tick pomodoro export
+tick pomodoro export [--year N] [--month N] [--output FILE] [--include-tags ...] [--exclude-tags ...]
+tick pomodoro stats
+tick pomodoro create [--task ID] [--duration MINS]
+tick pomodoro delete ID
+tick pomodoro timer list
+tick pomodoro timer stats NAME
+```
 
-# Export January 2026
-tick pomodoro export --year 2026 --month 1
+### Habits
 
-# Include only specific project
-tick pomodoro export --include-projects "TickTick"
+```sh
+tick habit list
+tick habit checkin HABIT_NAME [--value N]
+tick habit status [--date YYYY-MM-DD]
+```
 
-# Exclude specific tags
-tick pomodoro export --exclude-tags "fun"
+### Global Flags
 
-# Combine filters
-tick pomodoro export --include-projects "TickTick" --exclude-tags "fun"
-
-# Custom output path
-tick pomodoro export --output report.csv
+```sh
+tick -v ...     # Info level logging
+tick -vv ...    # Debug level logging
+tick -vvv ...   # Trace level logging
 ```
 
 ## Development

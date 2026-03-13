@@ -1,6 +1,7 @@
 package pomodoro
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"time"
@@ -41,4 +42,17 @@ func monthRange(year int, month time.Month) (time.Time, time.Time) {
 	start := time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 	end := start.AddDate(0, 1, 0).Add(-time.Nanosecond)
 	return start, end
+}
+
+// formatDuration converts seconds to a human-readable string like "1h 25m" or "45m".
+func formatDuration(seconds int) string {
+	if seconds < 60 {
+		return fmt.Sprintf("%ds", seconds)
+	}
+	h := seconds / 3600
+	m := (seconds % 3600) / 60
+	if h > 0 {
+		return fmt.Sprintf("%dh %dm", h, m)
+	}
+	return fmt.Sprintf("%dm", m)
 }

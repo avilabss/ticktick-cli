@@ -59,6 +59,78 @@ func (p *Pomodoros) Next() (*Pomodoros, error) {
 	return p.service.GetTimeline(to.UnixMilli())
 }
 
+// Stats returns general pomodoro statistics (today and total counts/durations).
+func (s *PomodoroService) Stats() (*PomodoroStats, error) {
+	res, err := s.client.Get("/v2/pomodoros/statistics/generalForDesktop")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	var stats PomodoroStats
+	if err := json.NewDecoder(res.Body).Decode(&stats); err != nil {
+		return nil, err
+	}
+	return &stats, nil
+}
+
+// Create creates a new pomodoro record via the batch endpoint.
+func (s *PomodoroService) Create(pomo Pomodoro) (*BatchResponse, error) {
+	req := struct {
+		Add    []Pomodoro `json:"add"`
+		Update []any      `json:"update"`
+		Delete []any      `json:"delete"`
+	}{
+		Add: []Pomodoro{pomo},
+	}
+
+	var result BatchResponse
+	if err := s.client.PostJSON("/v2/batch/pomodoro", req, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
+// DeletePomo deletes a pomodoro by ID.
+func (s *PomodoroService) DeletePomo(pomodoroID string) error {
+	req := PomodoroDeleteRequest{
+		PomodoroIDs: []string{pomodoroID},
+		TimingIDs:   []string{},
+	}
+	return s.client.DeleteJSON("/v2/pomodoro", req, nil)
+}
+
+// ListTimers returns all custom focus timers.
+func (s *PomodoroService) ListTimers() ([]FocusTimer, error) {
+	res, err := s.client.Get("/v2/timer")
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	var timers []FocusTimer
+	if err := json.NewDecoder(res.Body).Decode(&timers); err != nil {
+		return nil, err
+	}
+	return timers, nil
+}
+
+// TimerOverview returns overview stats for a specific timer.
+func (s *PomodoroService) TimerOverview(timerID string) (*FocusTimerOverview, error) {
+	endpoint := fmt.Sprintf("/v2/timer/overview/%s", timerID)
+	res, err := s.client.Get(endpoint)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = res.Body.Close() }()
+
+	var overview FocusTimerOverview
+	if err := json.NewDecoder(res.Body).Decode(&overview); err != nil {
+		return nil, err
+	}
+	return &overview, nil
+}
+
 // GetAll returns all pomodoros between start and end, paginating automatically.
 func (s *PomodoroService) GetAll(start, end time.Time) (*Pomodoros, error) {
 	var allItems []Pomodoro

@@ -291,3 +291,136 @@ func TestGetAll_APIError(t *testing.T) {
 		t.Fatal("expected error for network failure")
 	}
 }
+
+func TestStats_Success(t *testing.T) {
+	stats := PomodoroStats{
+		TodayPomoCount:    3,
+		TotalPomoCount:    150,
+		TodayPomoDuration: 4500,
+		TotalPomoDuration: 225000,
+	}
+	client := mockClientWithResponse(http.StatusOK, stats)
+
+	result, err := client.Pomodoro.Stats()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result.TodayPomoCount != 3 {
+		t.Errorf("expected TodayPomoCount=3, got %d", result.TodayPomoCount)
+	}
+	if result.TotalPomoCount != 150 {
+		t.Errorf("expected TotalPomoCount=150, got %d", result.TotalPomoCount)
+	}
+}
+
+func TestCreate_Success(t *testing.T) {
+	var capturedBody map[string]any
+	mock := &mockHTTPClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			body, _ := io.ReadAll(req.Body)
+			_ = json.Unmarshal(body, &capturedBody)
+			resp := BatchResponse{ID2Etag: map[string]string{"p1": "etag1"}}
+			jsonResp, _ := json.Marshal(resp)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(string(jsonResp))),
+			}, nil
+		},
+	}
+	client, _ := NewTicktickClient("token", WithHTTPClient(mock))
+
+	pomo := Pomodoro{
+		ID:        "test-pomo-id",
+		StartTime: "2026-02-10T10:00:00.000+0000",
+		EndTime:   "2026-02-10T10:25:00.000+0000",
+		Status:    1,
+	}
+
+	result, err := client.Pomodoro.Create(pomo)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if result.ID2Etag["p1"] != "etag1" {
+		t.Errorf("expected etag 'etag1', got %q", result.ID2Etag["p1"])
+	}
+
+	addList, ok := capturedBody["add"].([]any)
+	if !ok || len(addList) != 1 {
+		t.Fatalf("expected 1 item in add list, got %v", capturedBody["add"])
+	}
+}
+
+func TestDeletePomo_Success(t *testing.T) {
+	var capturedBody PomodoroDeleteRequest
+	mock := &mockHTTPClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			if req.Method != http.MethodDelete {
+				t.Errorf("expected DELETE, got %s", req.Method)
+			}
+			body, _ := io.ReadAll(req.Body)
+			_ = json.Unmarshal(body, &capturedBody)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader("{}")),
+			}, nil
+		},
+	}
+	client, _ := NewTicktickClient("token", WithHTTPClient(mock))
+
+	err := client.Pomodoro.DeletePomo("pomo-123")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(capturedBody.PomodoroIDs) != 1 || capturedBody.PomodoroIDs[0] != "pomo-123" {
+		t.Errorf("expected pomodoroIds=[pomo-123], got %v", capturedBody.PomodoroIDs)
+	}
+}
+
+func TestListTimers_Success(t *testing.T) {
+	timers := []FocusTimer{
+		{ID: "t1", Name: "Focus", Type: "pomodoro", PomodoroTime: 25},
+		{ID: "t2", Name: "Deep Work", Type: "pomodoro", PomodoroTime: 50},
+	}
+	client := mockClientWithResponse(http.StatusOK, timers)
+
+	result, err := client.Pomodoro.ListTimers()
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if len(result) != 2 {
+		t.Fatalf("expected 2 timers, got %d", len(result))
+	}
+	if result[0].Name != "Focus" {
+		t.Errorf("expected name 'Focus', got %q", result[0].Name)
+	}
+}
+
+func TestTimerOverview_Success(t *testing.T) {
+	var capturedURL string
+	overview := FocusTimerOverview{Days: 30, Today: 1500, Total: 90000}
+	mock := &mockHTTPClient{
+		DoFunc: func(req *http.Request) (*http.Response, error) {
+			capturedURL = req.URL.String()
+			jsonBody, _ := json.Marshal(overview)
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(string(jsonBody))),
+			}, nil
+		},
+	}
+	client, _ := NewTicktickClient("token", WithHTTPClient(mock))
+
+	result, err := client.Pomodoro.TimerOverview("timer-abc")
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !strings.Contains(capturedURL, "/v2/timer/overview/timer-abc") {
+		t.Errorf("expected URL to contain timer ID, got %q", capturedURL)
+	}
+	if result.Days != 30 {
+		t.Errorf("expected Days=30, got %d", result.Days)
+	}
+	if result.Total != 90000 {
+		t.Errorf("expected Total=90000, got %d", result.Total)
+	}
+}

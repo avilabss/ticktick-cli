@@ -6,7 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/avilabss/ticktick-cli/cmd/tick/habit"
 	"github.com/avilabss/ticktick-cli/cmd/tick/pomodoro"
+	"github.com/avilabss/ticktick-cli/cmd/tick/task"
 	"github.com/avilabss/ticktick-cli/pkg/logger"
 	"github.com/avilabss/ticktick-cli/pkg/ticktick"
 	"github.com/joho/godotenv"
@@ -19,7 +21,10 @@ func printUsage() {
 	fmt.Println("  -v, -vv, -vvv    Increase verbosity level")
 	fmt.Println()
 	fmt.Println("Commands:")
+	fmt.Println("  task        Manage tasks")
+	fmt.Println("  project     List projects")
 	fmt.Println("  pomodoro    Manage pomodoros")
+	fmt.Println("  habit       Manage habits")
 }
 
 // parseVerbosity extracts -v/-vv/-vvv flags from args and returns
@@ -74,8 +79,14 @@ func main() {
 	}
 
 	switch args[0] {
+	case "task":
+		task.Run(client, args[1:])
+	case "project":
+		task.RunProject(client, args[1:])
 	case "pomodoro":
 		pomodoro.Run(client, args[1:])
+	case "habit":
+		habit.Run(client, args[1:])
 	default:
 		fmt.Printf("Unknown command: %s\n\n", args[0])
 		printUsage()

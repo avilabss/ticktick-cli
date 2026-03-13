@@ -161,3 +161,28 @@ func TestMonthRange(t *testing.T) {
 		})
 	}
 }
+
+func TestFormatDuration(t *testing.T) {
+	tests := []struct {
+		name     string
+		seconds  int
+		expected string
+	}{
+		{"zero", 0, "0s"},
+		{"seconds only", 45, "45s"},
+		{"one minute", 60, "1m"},
+		{"minutes only", 1500, "25m"},
+		{"one hour", 3600, "1h 0m"},
+		{"hours and minutes", 5100, "1h 25m"},
+		{"multiple hours", 9000, "2h 30m"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := formatDuration(tt.seconds)
+			if result != tt.expected {
+				t.Errorf("formatDuration(%d) = %q, want %q", tt.seconds, result, tt.expected)
+			}
+		})
+	}
+}
