@@ -58,27 +58,27 @@ type BatchResponse struct {
 
 // Task represents a TickTick task.
 type Task struct {
-	ID          string    `json:"id"`
-	ProjectID   string    `json:"projectId"`
-	Title       string    `json:"title"`
-	Content     string    `json:"content"`
-	Desc        string    `json:"desc"`
-	Tags        []string  `json:"tags"`
-	Priority    int       `json:"priority"` // 0=none, 1=low, 3=medium, 5=high
-	Status      int       `json:"status"`   // 0=active, 2=completed
-	StartDate   string    `json:"startDate"`
-	DueDate     string    `json:"dueDate"`
-	TimeZone    string    `json:"timeZone"`
-	IsAllDay    bool      `json:"isAllDay"`
-	IsFloating  bool      `json:"isFloating"`
-	Reminders   []any     `json:"reminders"`
-	Items       []SubTask `json:"items"`
-	SortOrder   int64     `json:"sortOrder"`
-	RepeatFlag  string    `json:"repeatFlag"`
-	ExDate      []string  `json:"exDate"`
-	Etag        string    `json:"etag"`
-	CreatedTime string    `json:"createdTime"`
-	ModifiedTime string   `json:"modifiedTime"`
+	ID           string    `json:"id"`
+	ProjectID    string    `json:"projectId"`
+	Title        string    `json:"title"`
+	Content      string    `json:"content"`
+	Desc         string    `json:"desc,omitempty"`
+	Tags         []string  `json:"tags"`
+	Priority     int       `json:"priority"`        // 0=none, 1=low, 3=medium, 5=high
+	Status       int       `json:"status"`           // 0=active, 2=completed
+	StartDate    string    `json:"startDate,omitempty"`
+	DueDate      string    `json:"dueDate,omitempty"`
+	TimeZone     string    `json:"timeZone"`
+	IsAllDay     bool      `json:"isAllDay"`
+	IsFloating   bool      `json:"isFloating"`
+	Reminders    []any     `json:"reminders"`
+	Items        []SubTask `json:"items"`
+	SortOrder    int64     `json:"sortOrder"`
+	RepeatFlag   string    `json:"repeatFlag,omitempty"`
+	ExDate       []string  `json:"exDate"`
+	Etag         string    `json:"etag,omitempty"`
+	CreatedTime  string    `json:"createdTime"`
+	ModifiedTime string    `json:"modifiedTime"`
 }
 
 // SubTask represents a checklist item within a task.
@@ -118,13 +118,17 @@ type SyncResponse struct {
 	} `json:"syncTaskBean"`
 	ProjectProfiles []Project `json:"projectProfiles"`
 	Tags            []Tag     `json:"tags"`
+	InboxID         string    `json:"inboxId"`
 }
 
 // BatchTaskRequest is the request body for POST /v2/batch/task.
 type BatchTaskRequest struct {
-	Add    []Task `json:"add"`
-	Update []Task `json:"update"`
-	Delete []any  `json:"delete"`
+	Add               []Task `json:"add"`
+	Update            []Task `json:"update"`
+	Delete            []any  `json:"delete"`
+	AddAttachments    []any  `json:"addAttachments"`
+	UpdateAttachments []any  `json:"updateAttachments"`
+	DeleteAttachments []any  `json:"deleteAttachments"`
 }
 
 // TaskDeleteRequest identifies a task for deletion.

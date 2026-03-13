@@ -3,34 +3,36 @@ package habit
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runCheckin(client *ticktick.Client, args []string) {
-	fs := flag.NewFlagSet("checkin", flag.ExitOnError)
-	value := fs.Float64("value", 1, "check-in value (for Number-type habits)")
-	_ = fs.Parse(args)
+func checkinCmd(client **ticktick.Client) *cobra.Command {
+	var value float64
 
-	remaining := fs.Args()
-	if len(remaining) == 0 {
-		fmt.Println("Error: habit name is required")
-		fmt.Println("Usage: tick habit checkin HABIT_NAME [--value N]")
-		os.Exit(1)
+	cmd := &cobra.Command{
+		Use:   "checkin HABIT_NAME",
+		Short: "Check in a habit",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			habitName := strings.Join(args, " ")
+			return runCheckin(*client, habitName, value)
+		},
 	}
+	cmd.Flags().Float64Var(&value, "value", 1, "check-in value (for Number-type habits)")
+	return cmd
+}
 
-	habitName := strings.Join(remaining, " ")
-
+func runCheckin(client *ticktick.Client, habitName string, value float64) error {
 	habits, err := client.Habit.List()
 	if err != nil {
 		slog.Error("Failed to list habits", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	var found *ticktick.Habit
@@ -42,7 +44,7 @@ func runCheckin(client *ticktick.Client, args []string) {
 	}
 	if found == nil {
 		slog.Error("Habit not found", "name", habitName)
-		os.Exit(1)
+		return fmt.Errorf("habit not found: %s", habitName)
 	}
 
 	now := time.Now()
@@ -55,7 +57,7 @@ func runCheckin(client *ticktick.Client, args []string) {
 		CheckinStamp: now.Year()*10000 + int(now.Month())*100 + now.Day(),
 		CheckinTime:  now.UTC().Format(ticktick.TimeFormat),
 		OpTime:       now.UTC().Format(ticktick.TimeFormat),
-		Value:        *value,
+		Value:        value,
 		Goal:         found.Goal,
 		Status:       2,
 	}
@@ -63,8 +65,9 @@ func runCheckin(client *ticktick.Client, args []string) {
 	_, err = client.Habit.Checkin(checkin)
 	if err != nil {
 		slog.Error("Failed to check in", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	fmt.Printf("Checked in: %s\n", found.Name)
+	return nil
 }

@@ -58,10 +58,14 @@ tick --help
 
 ## Setup
 
-Create a `.env` file in the project root:
+1. Log in to [ticktick.com](https://ticktick.com) in your browser
+2. Open DevTools (`F12` or `Cmd+Option+I`)
+3. Go to **Application** → **Cookies** → `https://ticktick.com`
+4. Copy the value of the cookie named **`t`**
+5. Create a `.env` file in the directory where you run `tick`:
 
 ```
-TICKTICK_API_TOKEN=your_token_here
+TICKTICK_API_TOKEN=paste_cookie_value_here
 ```
 
 ## Usage
@@ -100,6 +104,16 @@ tick pomodoro timer stats NAME
 tick habit list
 tick habit checkin HABIT_NAME [--value N]
 tick habit status [--date YYYY-MM-DD]
+```
+
+### Help
+
+Every command supports `--help`:
+
+```sh
+tick --help
+tick task --help
+tick task add --help
 ```
 
 ### Global Flags

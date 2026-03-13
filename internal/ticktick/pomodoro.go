@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/logger"
+	"github.com/avilabss/ticktick-cli/internal/logger"
 )
 
 // PomodoroService handles pomodoro-related API calls.

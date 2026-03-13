@@ -1,32 +1,35 @@
 package task
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runComplete(client *ticktick.Client, args []string) {
-	fs := flag.NewFlagSet("complete", flag.ExitOnError)
-	project := fs.String("project", "", "project ID (auto-resolved if omitted)")
-	_ = fs.Parse(args)
+func completeCmd(client **ticktick.Client) *cobra.Command {
+	var project string
 
-	remaining := fs.Args()
-	if len(remaining) == 0 {
-		fmt.Println("Error: task ID is required")
-		fmt.Println("Usage: tick task complete TASK_ID [--project PROJECT_ID]")
-		os.Exit(1)
+	cmd := &cobra.Command{
+		Use:   "complete TASK_ID",
+		Short: "Complete a task",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runComplete(*client, args[0], project)
+		},
 	}
+	cmd.Flags().StringVar(&project, "project", "", "project ID (auto-resolved if omitted)")
+	return cmd
+}
 
-	taskID := remaining[0]
-	_, err := client.Task.Complete(taskID, *project)
+func runComplete(client *ticktick.Client, taskID, project string) error {
+	_, err := client.Task.Complete(taskID, project)
 	if err != nil {
 		slog.Error("Failed to complete task", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	fmt.Printf("Completed task: %s\n", taskID)
+	return nil
 }

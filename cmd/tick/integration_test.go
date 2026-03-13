@@ -86,8 +86,8 @@ func TestIntegration_CLINoArgs(t *testing.T) {
 	cmd := exec.Command("go", "run", "./")
 	cmd.Env = os.Environ()
 	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatal("expected non-zero exit code when no args provided")
+	if err != nil {
+		t.Fatalf("expected zero exit code when no args provided, got error: %v\nOutput: %s", err, out)
 	}
 
 	if len(out) == 0 {

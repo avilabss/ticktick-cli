@@ -7,40 +7,48 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func printTimerUsage() {
-	fmt.Println("Usage: tick pomodoro timer <command>")
-	fmt.Println()
-	fmt.Println("Commands:")
-	fmt.Println("  list     List all focus timers")
-	fmt.Println("  stats    Show stats for a focus timer")
+func timerCmd(client **ticktick.Client) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "timer",
+		Short: "Manage focus timers",
+	}
+	cmd.AddCommand(timerListCmd(client))
+	cmd.AddCommand(timerStatsCmd(client))
+	return cmd
 }
 
-func runTimer(client *ticktick.Client, args []string) {
-	if len(args) == 0 {
-		printTimerUsage()
-		os.Exit(1)
-	}
-
-	switch args[0] {
-	case "list":
-		runTimerList(client)
-	case "stats":
-		runTimerStats(client, args[1:])
-	default:
-		fmt.Printf("Unknown command: pomodoro timer %s\n\n", args[0])
-		printTimerUsage()
-		os.Exit(1)
+func timerListCmd(client **ticktick.Client) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List all focus timers",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runTimerList(*client)
+		},
 	}
 }
 
-func runTimerList(client *ticktick.Client) {
+func timerStatsCmd(client **ticktick.Client) *cobra.Command {
+	return &cobra.Command{
+		Use:   "stats NAME",
+		Short: "Show stats for a focus timer",
+		Args:  cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			timerName := strings.Join(args, " ")
+			return runTimerStats(*client, timerName)
+		},
+	}
+}
+
+func runTimerList(client *ticktick.Client) error {
 	timers, err := client.Pomodoro.ListTimers()
 	if err != nil {
 		slog.Error("Failed to list timers", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -50,21 +58,14 @@ func runTimerList(client *ticktick.Client) {
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%dm\n", t.Name, t.Type, t.PomodoroTime)
 	}
 	_ = w.Flush()
+	return nil
 }
 
-func runTimerStats(client *ticktick.Client, args []string) {
-	if len(args) == 0 {
-		fmt.Println("Error: timer name is required")
-		fmt.Println("Usage: tick pomodoro timer stats NAME")
-		os.Exit(1)
-	}
-
-	timerName := strings.Join(args, " ")
-
+func runTimerStats(client *ticktick.Client, timerName string) error {
 	timers, err := client.Pomodoro.ListTimers()
 	if err != nil {
 		slog.Error("Failed to list timers", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	var found *ticktick.FocusTimer
@@ -76,17 +77,18 @@ func runTimerStats(client *ticktick.Client, args []string) {
 	}
 	if found == nil {
 		slog.Error("Timer not found", "name", timerName)
-		os.Exit(1)
+		return fmt.Errorf("timer not found: %s", timerName)
 	}
 
 	overview, err := client.Pomodoro.TimerOverview(found.ID)
 	if err != nil {
 		slog.Error("Failed to get timer stats", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	fmt.Printf("Timer:  %s\n", found.Name)
 	fmt.Printf("Days:   %d\n", overview.Days)
 	fmt.Printf("Today:  %s\n", formatDuration(overview.Today))
 	fmt.Printf("Total:  %s\n", formatDuration(overview.Total))
+	return nil
 }

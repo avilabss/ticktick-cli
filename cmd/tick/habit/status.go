@@ -1,28 +1,39 @@
 package habit
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"text/tabwriter"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runStatus(client *ticktick.Client, args []string) {
-	fs := flag.NewFlagSet("status", flag.ExitOnError)
-	dateStr := fs.String("date", "", "date to check (YYYY-MM-DD, default today)")
-	_ = fs.Parse(args)
+func statusCmd(client **ticktick.Client) *cobra.Command {
+	var dateStr string
 
+	cmd := &cobra.Command{
+		Use:   "status",
+		Short: "Show habit status for today",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runStatus(*client, dateStr)
+		},
+	}
+	cmd.Flags().StringVar(&dateStr, "date", "", "date to check (YYYY-MM-DD, default today)")
+	return cmd
+}
+
+func runStatus(client *ticktick.Client, dateStr string) error {
 	date := time.Now()
-	if *dateStr != "" {
+	if dateStr != "" {
 		var err error
-		date, err = time.Parse("2006-01-02", *dateStr)
+		date, err = time.Parse("2006-01-02", dateStr)
 		if err != nil {
 			slog.Error("Invalid date format", "error", err)
-			os.Exit(1)
+			return err
 		}
 	}
 
@@ -31,12 +42,12 @@ func runStatus(client *ticktick.Client, args []string) {
 	habits, err := client.Habit.List()
 	if err != nil {
 		slog.Error("Failed to list habits", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	if len(habits) == 0 {
 		fmt.Println("No habits found")
-		return
+		return nil
 	}
 
 	habitIDs := make([]string, len(habits))
@@ -47,7 +58,7 @@ func runStatus(client *ticktick.Client, args []string) {
 	records, err := client.Habit.GetRecords(stamp, habitIDs)
 	if err != nil {
 		slog.Error("Failed to get habit records", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -70,4 +81,5 @@ func runStatus(client *ticktick.Client, args []string) {
 		_, _ = fmt.Fprintf(w, "%s\t%s\t%s\n", h.Name, status, valueStr)
 	}
 	_ = w.Flush()
+	return nil
 }

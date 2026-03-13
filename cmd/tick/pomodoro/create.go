@@ -3,23 +3,34 @@ package pomodoro
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runCreate(client *ticktick.Client, args []string) {
-	fs := flag.NewFlagSet("create", flag.ExitOnError)
-	taskID := fs.String("task", "", "task ID to associate with the pomodoro")
-	duration := fs.Int("duration", 25, "pomodoro duration in minutes")
-	_ = fs.Parse(args)
+func createCmd(client **ticktick.Client) *cobra.Command {
+	var taskID string
+	var duration int
 
+	cmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a pomodoro record",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runCreate(*client, taskID, duration)
+		},
+	}
+	cmd.Flags().StringVar(&taskID, "task", "", "task ID to associate with the pomodoro")
+	cmd.Flags().IntVar(&duration, "duration", 25, "pomodoro duration in minutes")
+	return cmd
+}
+
+func runCreate(client *ticktick.Client, taskID string, duration int) error {
 	now := time.Now().UTC()
-	start := now.Add(-time.Duration(*duration) * time.Minute)
+	start := now.Add(-time.Duration(duration) * time.Minute)
 
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)
@@ -32,10 +43,10 @@ func runCreate(client *ticktick.Client, args []string) {
 		Type:      0,
 	}
 
-	if *taskID != "" {
+	if taskID != "" {
 		pomo.Tasks = []ticktick.PomodoroTask{
 			{
-				TaskID:    *taskID,
+				TaskID:    taskID,
 				StartTime: start.Format(ticktick.TimeFormat),
 				EndTime:   now.Format(ticktick.TimeFormat),
 			},
@@ -45,8 +56,9 @@ func runCreate(client *ticktick.Client, args []string) {
 	_, err := client.Pomodoro.Create(pomo)
 	if err != nil {
 		slog.Error("Failed to create pomodoro", "error", err)
-		os.Exit(1)
+		return err
 	}
 
-	fmt.Printf("Created pomodoro: %d min\n", *duration)
+	fmt.Printf("Created pomodoro: %d min\n", duration)
+	return nil
 }

@@ -95,6 +95,14 @@ func (s *TaskService) Create(task Task) (*BatchResponse, error) {
 		task.ID = generateID()
 	}
 
+	if task.ProjectID == "" {
+		sync, err := s.Sync()
+		if err != nil {
+			return nil, fmt.Errorf("failed to resolve inbox: %w", err)
+		}
+		task.ProjectID = sync.InboxID
+	}
+
 	now := time.Now().UTC().Format(TimeFormat)
 	if task.CreatedTime == "" {
 		task.CreatedTime = now
@@ -103,10 +111,27 @@ func (s *TaskService) Create(task Task) (*BatchResponse, error) {
 		task.ModifiedTime = now
 	}
 
+	// TickTick API requires empty arrays, not null.
+	if task.Tags == nil {
+		task.Tags = []string{}
+	}
+	if task.Items == nil {
+		task.Items = []SubTask{}
+	}
+	if task.Reminders == nil {
+		task.Reminders = []any{}
+	}
+	if task.ExDate == nil {
+		task.ExDate = []string{}
+	}
+
 	req := BatchTaskRequest{
-		Add:    []Task{task},
-		Update: []Task{},
-		Delete: []any{},
+		Add:               []Task{task},
+		Update:            []Task{},
+		Delete:            []any{},
+		AddAttachments:    []any{},
+		UpdateAttachments: []any{},
+		DeleteAttachments: []any{},
 	}
 
 	var result BatchResponse
@@ -130,9 +155,12 @@ func (s *TaskService) Complete(taskID, projectID string) (*BatchResponse, error)
 	task.ModifiedTime = time.Now().UTC().Format(TimeFormat)
 
 	req := BatchTaskRequest{
-		Add:    []Task{},
-		Update: []Task{*task},
-		Delete: []any{},
+		Add:               []Task{},
+		Update:            []Task{*task},
+		Delete:            []any{},
+		AddAttachments:    []any{},
+		UpdateAttachments: []any{},
+		DeleteAttachments: []any{},
 	}
 
 	var result BatchResponse

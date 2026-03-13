@@ -1,39 +1,46 @@
 package task
 
 import (
-	"flag"
 	"fmt"
 	"log/slog"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runAdd(client *ticktick.Client, args []string) {
-	fs := flag.NewFlagSet("add", flag.ExitOnError)
-	title := fs.String("title", "", "task title (required)")
-	project := fs.String("project", "", "project name")
-	tags := fs.String("tags", "", "comma-separated tags")
-	priority := fs.Int("priority", 0, "priority (0=none, 1=low, 3=medium, 5=high)")
-	due := fs.String("due", "", "due date (YYYY-MM-DD)")
-	_ = fs.Parse(args)
+func addCmd(client **ticktick.Client) *cobra.Command {
+	var title, project, tags, due string
+	var priority int
 
-	if *title == "" {
-		fmt.Println("Error: --title is required")
-		fmt.Println("Usage: tick task add --title \"Task name\" [--project NAME] [--tags \"a,b\"] [--priority N] [--due YYYY-MM-DD]")
-		os.Exit(1)
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "Create a new task",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runAdd(*client, title, project, tags, priority, due)
+		},
 	}
+	cmd.Flags().StringVar(&title, "title", "", "task title (required)")
+	cmd.Flags().StringVar(&project, "project", "", "project name")
+	cmd.Flags().StringVar(&tags, "tags", "", "comma-separated tags")
+	cmd.Flags().IntVar(&priority, "priority", 0, "priority (0=none, 1=low, 3=medium, 5=high)")
+	cmd.Flags().StringVar(&due, "due", "", "due date (YYYY-MM-DD)")
+	_ = cmd.MarkFlagRequired("title")
+	return cmd
+}
 
+func runAdd(client *ticktick.Client, title, project, tags string, priority int, due string) error {
 	task := ticktick.Task{
-		Title:    *title,
-		Priority: *priority,
-		TimeZone: time.Now().Location().String(),
+		Title:    title,
+		Priority: priority,
+		TimeZone: localTimezone(),
 	}
 
-	if *tags != "" {
-		for _, t := range strings.Split(*tags, ",") {
+	if tags != "" {
+		for _, t := range strings.Split(tags, ",") {
 			t = strings.TrimSpace(t)
 			if t != "" {
 				task.Tags = append(task.Tags, t)
@@ -41,44 +48,60 @@ func runAdd(client *ticktick.Client, args []string) {
 		}
 	}
 
-	if *due != "" {
-		d, err := time.Parse("2006-01-02", *due)
+	if due != "" {
+		d, err := time.Parse("2006-01-02", due)
 		if err != nil {
 			slog.Error("Invalid due date format", "error", err)
-			os.Exit(1)
+			return err
 		}
 		task.DueDate = d.Format(ticktick.TimeFormat)
 		task.StartDate = task.DueDate
 		task.IsAllDay = true
 	}
 
-	if *project != "" {
+	if project != "" {
 		projects, err := client.Task.ListProjects()
 		if err != nil {
 			slog.Error("Failed to list projects", "error", err)
-			os.Exit(1)
+			return err
 		}
 		found := false
 		for _, p := range projects {
-			if strings.Contains(strings.ToLower(p.Name), strings.ToLower(*project)) {
+			if strings.Contains(strings.ToLower(p.Name), strings.ToLower(project)) {
 				task.ProjectID = p.ID
 				found = true
 				break
 			}
 		}
 		if !found {
-			slog.Error("Project not found", "name", *project)
-			os.Exit(1)
+			slog.Error("Project not found", "name", project)
+			return fmt.Errorf("project not found: %s", project)
 		}
 	}
 
 	result, err := client.Task.Create(task)
 	if err != nil {
 		slog.Error("Failed to create task", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	for id := range result.ID2Etag {
-		fmt.Printf("Created task: %s (ID: %s)\n", *title, id)
+		fmt.Printf("Created task: %s (ID: %s)\n", title, id)
 	}
+	return nil
+}
+
+// localTimezone returns the IANA timezone name (e.g. "Asia/Calcutta").
+// Go's time.Now().Location().String() returns "Local" which the API rejects.
+func localTimezone() string {
+	if tz := os.Getenv("TZ"); tz != "" {
+		return tz
+	}
+	if target, err := os.Readlink("/etc/localtime"); err == nil {
+		if idx := strings.Index(target, "zoneinfo/"); idx != -1 {
+			return target[idx+len("zoneinfo/"):]
+		}
+	}
+	name, _ := time.Now().Zone()
+	return name
 }

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/avilabss/ticktick-cli/pkg/logger"
+	"github.com/avilabss/ticktick-cli/internal/logger"
 )
 
 // NewTicktickClient creates a new TickTick API client with sensible defaults.
@@ -68,6 +68,8 @@ func (c *Client) do(method, endpoint string, body io.Reader) (*http.Response, er
 	}
 
 	req.Header.Set("Cookie", fmt.Sprintf("t=%s", c.APIToken))
+	req.Header.Set("Origin", "https://ticktick.com")
+	req.Header.Set("x-device", `{"platform":"web","os":"","device":"","name":"","version":4531,"id":"","channel":"website","campaign":""}`)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -80,7 +82,9 @@ func (c *Client) do(method, endpoint string, body io.Reader) (*http.Response, er
 	slog.Debug("HTTP response", "status", res.StatusCode, "url", url)
 
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(res.Body)
 		_ = res.Body.Close()
+		slog.Debug("Error response body", "status", res.StatusCode, "body", string(body))
 		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
 	}
 

@@ -6,14 +6,26 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/avilabss/ticktick-cli/pkg/ticktick"
+	"github.com/avilabss/ticktick-cli/internal/ticktick"
+	"github.com/spf13/cobra"
 )
 
-func runProjectList(client *ticktick.Client) {
+func projectListCmd(client **ticktick.Client) *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List all projects",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runProjectList(*client)
+		},
+	}
+}
+
+func runProjectList(client *ticktick.Client) error {
 	projects, err := client.Task.ListProjects()
 	if err != nil {
 		slog.Error("Failed to list projects", "error", err)
-		os.Exit(1)
+		return err
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
@@ -23,4 +35,5 @@ func runProjectList(client *ticktick.Client) {
 		_, _ = fmt.Fprintf(w, "%s\t%s\n", p.ID, p.Name)
 	}
 	_ = w.Flush()
+	return nil
 }
